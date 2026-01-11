@@ -1,0 +1,219 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useAuthStore } from '@/stores/auth.store'
+import Link from 'next/link'
+import { UserMenu } from '@/components/user-menu'
+
+interface Product {
+  id: string
+  name: string
+  description: string
+  price: number
+  stock: number
+}
+
+export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [newProduct, setNewProduct] = useState({ name: '', description: '', price: '', stock: '' })
+  const { token, user } = useAuthStore()
+  const logout = useAuthStore((state) => state.logout)
+
+  useEffect(() => {
+    if (user?.tenantId) {
+      fetchProducts()
+    }
+  }, [user])
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setProducts(data)
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createProduct = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: newProduct.name,
+          description: newProduct.description,
+          price: parseFloat(newProduct.price),
+          stock: parseInt(newProduct.stock),
+        }),
+      })
+      if (response.ok) {
+        alert('Product created successfully!')
+        setDialogOpen(false)
+        setNewProduct({ name: '', description: '', price: '', stock: '' })
+        fetchProducts()
+      } else {
+        alert('Failed to create product')
+      }
+    } catch (error) {
+      console.error('Error creating product:', error)
+      alert('Error creating product')
+    }
+  }
+
+  if (loading) return <div>Loading...</div>
+
+  return (
+    <SidebarProvider>
+      <div className="flex h-screen">
+        <Sidebar>
+          <SidebarHeader>
+            <h2 className="text-lg font-semibold text-center">Director Dashboard</h2>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarMenu>
+              <div className="space-y-2">
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href="/admin" className="w-full">Dashboard</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href="/admin/sales" className="w-full">Sales</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href="/admin/products" className="w-full">Products</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton className="w-full">Statistics</SidebarMenuButton>
+                </SidebarMenuItem>
+              </div>
+            </SidebarMenu>
+          </SidebarContent>
+          <UserMenu />
+        </Sidebar>
+        <main className="flex-1 p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <SidebarTrigger />
+            <h1 className="text-3xl font-bold">Products Management</h1>
+            <Button onClick={() => { logout(); window.location.href = '/'; }} variant="outline" className="ml-auto">
+              Logout
+            </Button>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-2xl font-semibold">All Products</h2>
+                <p className="text-gray-600 dark:text-gray-400">Manage your product inventory</p>
+              </div>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>Add Product</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Product</DialogTitle>
+                    <DialogDescription>Add a product to your inventory.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="product-name">Name</Label>
+                      <Input
+                        id="product-name"
+                        value={newProduct.name}
+                        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="product-description">Description</Label>
+                      <Input
+                        id="product-description"
+                        value={newProduct.description}
+                        onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="product-price">Price</Label>
+                      <Input
+                        id="product-price"
+                        type="number"
+                        value={newProduct.price}
+                        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="product-stock">Stock</Label>
+                      <Input
+                        id="product-stock"
+                        type="number"
+                        value={newProduct.stock}
+                        onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                      />
+                    </div>
+                    <Button onClick={createProduct} className="w-full">Create Product</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {products.map((product) => (
+                <Card key={product.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-xl">{product.name}</CardTitle>
+                    <CardDescription className="text-gray-600 dark:text-gray-400">{product.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex justify-between items-center mb-6">
+                      <span className="text-3xl font-bold text-blue-600 dark:text-white">${product.price}</span>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        product.stock > 10 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                        product.stock > 0 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                      }`}>
+                        Stock: {product.stock}
+                      </span>
+                    </div>
+                    <Button variant="outline" className="w-full">Edit Product</Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {products.length === 0 && (
+              <Card className="p-12 text-center">
+                <CardContent>
+                  <p className="text-gray-500 dark:text-gray-400 text-lg">No products added yet.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
+  )
+}
