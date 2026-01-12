@@ -18,6 +18,7 @@ import Link from 'next/link'
 import { UserMenu } from '@/components/user-menu'
 import { useT } from '@/lib/i18n'
 import { CheckCircle, XCircle, Plus } from 'lucide-react'
+import { API_BASE_URL } from '@/lib/api'
 
 interface User {
   id: string
@@ -158,7 +159,7 @@ export default function AdminDashboard() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/users/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/users/${user!.tenantId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -180,7 +181,7 @@ export default function AdminDashboard() {
       const endDate = new Date().toISOString().split('T')[0]
       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-      const response = await fetch(`http://localhost:5000/stats/revenue/${user!.tenantId}?startDate=${startDate}&endDate=${endDate}`, {
+      const response = await fetch(`${API_BASE_URL}/stats/revenue/${user!.tenantId}?startDate=${startDate}&endDate=${endDate}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -205,7 +206,7 @@ export default function AdminDashboard() {
   const createUser = async () => {
     console.log('Creating user:', newUser.email, newUser.role)
     try {
-      const response = await fetch(`http://localhost:5000/users/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/users/${user!.tenantId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -238,7 +239,7 @@ export default function AdminDashboard() {
     if (!editingUser) return
 
     try {
-      const response = await fetch(`http://localhost:5000/users/${user!.tenantId}/${editingUser.id}`, {
+      const response = await fetch(`${API_BASE_URL}/users/${user!.tenantId}/${editingUser.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -264,7 +265,7 @@ export default function AdminDashboard() {
     if (!confirm('Are you sure you want to delete this user?')) return
 
     try {
-      const response = await fetch(`http://localhost:5000/users/${user!.tenantId}/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/users/${user!.tenantId}/${userId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -284,7 +285,7 @@ export default function AdminDashboard() {
 
   const fetchSubscription = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/subscriptions/tenant/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/subscriptions/tenant/${user!.tenantId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -307,7 +308,7 @@ export default function AdminDashboard() {
 
   const fetchTenants = async () => {
     try {
-      const response = await fetch('http://localhost:5000/tenants', {
+      const response = await fetch(`${API_BASE_URL}/tenants`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -355,7 +356,7 @@ export default function AdminDashboard() {
         features: editSubscription.features.split('\n').filter(f => f.trim())
       }
 
-      const response = await fetch(`http://localhost:5000/subscriptions/${editingSubscription.id}`, {
+      const response = await fetch(`${API_BASE_URL}/subscriptions/${editingSubscription.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -386,7 +387,7 @@ export default function AdminDashboard() {
     setSubscriptionSuccess('')
 
     try {
-      const response = await fetch(`http://localhost:5000/subscriptions/${subscription.id}`, {
+      const response = await fetch(`${API_BASE_URL}/subscriptions/${subscription.id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -410,7 +411,7 @@ export default function AdminDashboard() {
     setSubscriptionError('')
     setSubscriptionSuccess('')
     try {
-      const response = await fetch('http://localhost:5000/subscriptions', {
+      const response = await fetch(`${API_BASE_URL}/subscriptions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

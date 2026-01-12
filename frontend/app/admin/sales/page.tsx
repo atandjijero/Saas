@@ -14,6 +14,7 @@ import { UserMenu } from '@/components/user-menu'
 import { useT } from '@/lib/i18n'
 import { ShoppingCart } from 'lucide-react'
 import { useSocket } from '@/hooks/use-socket'
+import { API_BASE_URL } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -101,7 +102,7 @@ export default function SalesPage() {
 
   const fetchSales = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/sales/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/sales/${user!.tenantId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -119,7 +120,7 @@ export default function SalesPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${user!.tenantId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -135,7 +136,7 @@ export default function SalesPage() {
 
   const createSale = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/sales/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/sales/${user!.tenantId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -249,9 +250,9 @@ export default function SalesPage() {
         })),
       }
       console.log('Request body:', requestBody)
-      console.log('URL:', `http://localhost:5000/sales/${user.tenantId}`)
+      console.log('URL:', `${API_BASE_URL}/sales/${user.tenantId}`)
 
-      const response = await fetch(`http://localhost:5000/sales/${user.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/sales/${user.tenantId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

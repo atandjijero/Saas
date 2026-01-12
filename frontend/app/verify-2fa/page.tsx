@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuthStore } from '@/stores/auth.store'
+import { API_BASE_URL } from '@/lib/api'
 
 export default function Verify2FAPage() {
   const [token, setToken] = useState('')
@@ -24,7 +25,7 @@ export default function Verify2FAPage() {
     setSuccess('')
 
     try {
-      const response = await fetch('http://localhost:5000/auth/verify-2fa', {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-2fa`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

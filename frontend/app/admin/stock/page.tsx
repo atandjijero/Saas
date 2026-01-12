@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { UserMenu } from '@/components/user-menu'
 import { useT } from '@/lib/i18n'
 import { AlertTriangle, Package } from 'lucide-react'
+import { API_BASE_URL } from '@/lib/api'
 
 interface Product {
   id: string
@@ -39,7 +40,7 @@ export default function StockPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${user!.tenantId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -59,7 +60,7 @@ export default function StockPage() {
     if (!selectedProduct || !newStock) return
 
     try {
-      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}/${selectedProduct.id}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${user!.tenantId}/${selectedProduct.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

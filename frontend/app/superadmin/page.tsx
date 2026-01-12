@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip } from 'recharts'
+import { API_BASE_URL } from '@/lib/api'
 
 import { useAuthStore } from '@/stores/auth.store'
 import { UserMenu } from '@/components/user-menu'
@@ -95,7 +96,7 @@ export default function SuperadminDashboard() {
   const fetchTenantsData = useCallback(async () => {
     try {
       // Fetch tenants with revenue for dashboard
-      const statsResponse = await fetch('http://localhost:5000/stats/all-revenue', {
+      const statsResponse = await fetch(`${API_BASE_URL}/stats/all-revenue`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -106,7 +107,7 @@ export default function SuperadminDashboard() {
       }
 
       // Fetch all tenants for management
-      const tenantsResponse = await fetch('http://localhost:5000/tenants', {
+      const tenantsResponse = await fetch(`${API_BASE_URL}/tenants`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -125,7 +126,7 @@ export default function SuperadminDashboard() {
   const fetchUsersForTenant = async (tenantId: string) => {
     if (!tenantId) return
     try {
-      const res = await fetch(`http://localhost:5000/users/${tenantId}`, {
+      const res = await fetch(`${API_BASE_URL}/users/${tenantId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
@@ -143,13 +144,13 @@ export default function SuperadminDashboard() {
   const fetchGlobalStats = useCallback(async () => {
     try {
       const [revenueRes, tenantsRes, usersRes] = await Promise.all([
-        fetch('http://localhost:5000/stats/all-revenue', {
+        fetch(`${API_BASE_URL}/stats/all-revenue`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('http://localhost:5000/tenants', {
+        fetch(`${API_BASE_URL}/tenants`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('http://localhost:5000/users', {
+        fetch(`${API_BASE_URL}/users`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ])
@@ -178,7 +179,7 @@ export default function SuperadminDashboard() {
 
     setIsCreating(true)
     try {
-      const response = await fetch('http://localhost:5000/tenants', {
+      const response = await fetch(`${API_BASE_URL}/tenants`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -215,7 +216,7 @@ export default function SuperadminDashboard() {
     if (!newUserEmail.trim() || !newUserPassword.trim()) return
     setIsCreating(true)
     try {
-      const res = await fetch(`http://localhost:5000/users/${selectedTenantForUsers}`, {
+      const res = await fetch(`${API_BASE_URL}/users/${selectedTenantForUsers}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email: newUserEmail.trim(), password: newUserPassword.trim(), role: newUserRole }),
@@ -243,7 +244,7 @@ export default function SuperadminDashboard() {
     setSubscriptionLoading(true)
     setSubscriptionError('')
     try {
-      const response = await fetch('http://localhost:5000/subscriptions', {
+      const response = await fetch(`${API_BASE_URL}/subscriptions`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (response.ok) {
@@ -265,7 +266,7 @@ export default function SuperadminDashboard() {
     setSubscriptionError('')
     setSubscriptionSuccess('')
     try {
-      const response = await fetch('http://localhost:5000/subscriptions', {
+      const response = await fetch(`${API_BASE_URL}/subscriptions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

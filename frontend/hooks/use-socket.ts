@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
+import { API_BASE_URL } from '@/lib/api'
 
 export const useSocket = (tenantId?: string) => {
   const socketRef = useRef<Socket | null>(null)
@@ -10,7 +11,7 @@ export const useSocket = (tenantId?: string) => {
     if (!tenantId) return
 
     // Connect to the socket server
-    socketRef.current = io('http://localhost:5000', {
+    socketRef.current = io(API_BASE_URL, {
       query: { tenantId }
     })
 

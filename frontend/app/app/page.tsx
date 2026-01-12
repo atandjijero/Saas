@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { User, Settings, LogOut, Sun, Moon, ShoppingCart } from 'lucide-react'
+import { API_BASE_URL } from '@/lib/api'
 
 interface Product {
   id: string
@@ -99,7 +100,7 @@ export default function AppDashboard() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${user!.tenantId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -205,7 +206,7 @@ export default function AppDashboard() {
         })),
       }
 
-      const response = await fetch(`http://localhost:5000/sales/${user.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/sales/${user.tenantId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

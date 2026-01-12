@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/auth.store'
 import Link from 'next/link'
 import { UserMenu } from '@/components/user-menu'
 import { useT } from '@/lib/i18n'
+import { API_BASE_URL } from '@/lib/api'
 
 interface Product {
   id: string
@@ -40,7 +41,7 @@ export default function ProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${user!.tenantId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -58,7 +59,7 @@ export default function ProductsPage() {
 
   const updateProduct = async (productId: string, updatedProduct: Partial<Product>) => {
     try {
-      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}/${productId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${user!.tenantId}/${productId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -80,7 +81,7 @@ export default function ProductsPage() {
 
   const createProduct = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${user!.tenantId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +112,7 @@ export default function ProductsPage() {
     if (!confirm('Are you sure you want to delete this product?')) return
 
     try {
-      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}/${productId}`, {
+      const response = await fetch(`${API_BASE_URL}/products/${user!.tenantId}/${productId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

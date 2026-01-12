@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useThemeStore } from '@/stores/theme.store'
 import { Sun, Moon } from 'lucide-react'
+import { API_BASE_URL } from '@/lib/api'
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
@@ -37,7 +38,7 @@ export default function ResetPasswordPage() {
     setMessage('')
 
     try {
-      const response = await fetch('http://localhost:5000/auth/reset-password', {
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

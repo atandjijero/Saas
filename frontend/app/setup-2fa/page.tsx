@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuthStore } from '@/stores/auth.store'
+import { API_BASE_URL } from '@/lib/api'
 
 export default function Setup2FAPage() {
   const [qrCode, setQrCode] = useState('')
@@ -29,7 +30,7 @@ export default function Setup2FAPage() {
 
   const setup2FA = async () => {
     try {
-      const response = await fetch('http://localhost:5000/auth/setup-2fa', {
+      const response = await fetch(`${API_BASE_URL}/auth/setup-2fa`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -55,7 +56,7 @@ export default function Setup2FAPage() {
     setSuccess('')
 
     try {
-      const response = await fetch('http://localhost:5000/auth/enable-2fa', {
+      const response = await fetch(`${API_BASE_URL}/auth/enable-2fa`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +69,7 @@ export default function Setup2FAPage() {
       if (response.ok) {
         setSuccess('2FA activé avec succès, connexion en cours...')
         // Now login
-        const loginResponse = await fetch('http://localhost:5000/auth/verify-2fa', {
+        const loginResponse = await fetch(`${API_BASE_URL}/auth/verify-2fa`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
