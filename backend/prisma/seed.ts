@@ -35,6 +35,37 @@ async function main() {
     },
   });
 
+  // Create subscriptions for tenants
+  const subscription1 = await prisma.subscription.upsert({
+    where: { tenantId: tenant1.id },
+    update: {},
+    create: {
+      tenantId: tenant1.id,
+      planName: 'Professional',
+      planType: 'PROFESSIONAL',
+      price: 49.99,
+      maxUsers: 10,
+      maxProducts: 1000,
+      features: ['Gestion des ventes', 'Rapports avancés', 'Support prioritaire', 'API access'],
+      isActive: true,
+    },
+  });
+
+  const subscription2 = await prisma.subscription.upsert({
+    where: { tenantId: tenant2.id },
+    update: {},
+    create: {
+      tenantId: tenant2.id,
+      planName: 'Basic',
+      planType: 'BASIC',
+      price: 19.99,
+      maxUsers: 5,
+      maxProducts: 500,
+      features: ['Gestion des ventes', 'Rapports basiques', 'Support email'],
+      isActive: true,
+    },
+  });
+
   // Create directors
   const director1 = await prisma.user.upsert({
     where: { email: 'director1@example.com' },
@@ -77,6 +108,29 @@ async function main() {
       email: 'seller2@example.com',
       password: hashedPassword,
       role: 'VENDEUR',
+      tenantId: tenant2.id,
+    },
+  });
+
+  // Create stock managers
+  const stockManager1 = await prisma.user.upsert({
+    where: { email: 'stock1@example.com' },
+    update: { password: hashedPassword },
+    create: {
+      email: 'stock1@example.com',
+      password: hashedPassword,
+      role: 'MAGASINIER',
+      tenantId: tenant1.id,
+    },
+  });
+
+  const stockManager2 = await prisma.user.upsert({
+    where: { email: 'stock2@example.com' },
+    update: { password: hashedPassword },
+    create: {
+      email: 'stock2@example.com',
+      password: hashedPassword,
+      role: 'MAGASINIER',
       tenantId: tenant2.id,
     },
   });

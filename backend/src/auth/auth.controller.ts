@@ -1,4 +1,5 @@
 import { Controller, Request, Post, UseGuards, Body, UnauthorizedException } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
@@ -14,6 +15,7 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 attempts per minute
   @ApiOperation({ summary: 'Login' })
   @ApiResponse({ status: 201, description: 'Logged in' })
   @ApiBody({ type: LoginDto })
@@ -24,6 +26,7 @@ export class AuthController {
   }
 
   @Post('register')
+  @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 registrations per hour
   @ApiOperation({ summary: 'Register a new user' })
   async register(@Body() body: RegisterDto) {
     return this.authService.register(body.email, body.password, body.role, body.tenantId);
@@ -48,12 +51,14 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 requests per hour
   @ApiOperation({ summary: 'Request password reset' })
   async forgotPassword(@Body() body: ForgotPasswordDto) {
     return this.authService.forgotPassword(body.email);
   }
 
   @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 3600000 } }) // 5 attempts per hour
   @ApiOperation({ summary: 'Reset password with token' })
   async resetPassword(@Body() body: ResetPasswordDto) {
     return this.authService.resetPassword(body.token, body.password);

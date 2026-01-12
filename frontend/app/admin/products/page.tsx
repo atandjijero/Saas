@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/stores/auth.store'
 import Link from 'next/link'
 import { UserMenu } from '@/components/user-menu'
+import { useT } from '@/lib/i18n'
 
 interface Product {
   id: string
@@ -23,9 +24,13 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [newProduct, setNewProduct] = useState({ name: '', description: '', price: '', stock: '' })
+  const [editProduct, setEditProduct] = useState({ name: '', description: '', price: '', stock: '' })
   const { token, user } = useAuthStore()
   const logout = useAuthStore((state) => state.logout)
+  const t = useT()
 
   useEffect(() => {
     if (user?.tenantId) {
@@ -48,6 +53,28 @@ export default function ProductsPage() {
       console.error('Error fetching products:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const updateProduct = async (productId: string, updatedProduct: Partial<Product>) => {
+    try {
+      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}/${productId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedProduct),
+      })
+      if (response.ok) {
+        alert('Product updated successfully!')
+        fetchProducts()
+      } else {
+        alert('Failed to update product')
+      }
+    } catch (error) {
+      console.error('Error updating product:', error)
+      alert('Error updating product')
     }
   }
 
@@ -80,6 +107,53 @@ export default function ProductsPage() {
     }
   }
 
+  const deleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return
+
+    try {
+      const response = await fetch(`http://localhost:5000/products/${user!.tenantId}/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (response.ok) {
+        alert('Product deleted successfully!')
+        fetchProducts()
+      } else {
+        alert('Failed to delete product')
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      alert('Error deleting product')
+    }
+  }
+
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product)
+    setEditProduct({
+      name: product.name,
+      description: product.description || '',
+      price: product.price.toString(),
+      stock: product.stock.toString(),
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleUpdateProduct = async () => {
+    if (!editingProduct) return
+
+    await updateProduct(editingProduct.id, {
+      name: editProduct.name,
+      description: editProduct.description,
+      price: parseFloat(editProduct.price),
+      stock: parseInt(editProduct.stock),
+    })
+
+    setEditDialogOpen(false)
+    setEditingProduct(null)
+  }
+
   if (loading) return <div>Loading...</div>
 
   return (
@@ -94,21 +168,26 @@ export default function ProductsPage() {
               <div className="space-y-2">
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <Link href="/admin" className="w-full">Dashboard</Link>
+                    <Link href="/admin" className="w-full">{t('admin.sidebar.dashboard')}</Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <Link href="/admin/sales" className="w-full">Sales</Link>
+                    <Link href="/admin/sales" className="w-full">{t('admin.sidebar.sales')}</Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <Link href="/admin/products" className="w-full">Products</Link>
+                    <Link href="/admin/subscriptions" className="w-full">{t('admin.sidebar.subscriptions')}</Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton className="w-full">Statistics</SidebarMenuButton>
+                  <SidebarMenuButton asChild>
+                    <Link href="/admin/products" className="w-full">{t('admin.sidebar.products')}</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton className="w-full">{t('admin.sidebar.statistics')}</SidebarMenuButton>
                 </SidebarMenuItem>
               </div>
             </SidebarMenu>
@@ -120,7 +199,7 @@ export default function ProductsPage() {
             <SidebarTrigger />
             <h1 className="text-3xl font-bold">Products Management</h1>
             <Button onClick={() => { logout(); window.location.href = '/'; }} variant="outline" className="ml-auto">
-              Logout
+              {t('admin.titles.logout')}
             </Button>
           </div>
 
@@ -180,6 +259,55 @@ export default function ProductsPage() {
               </Dialog>
             </div>
 
+            {/* Edit Product Dialog */}
+            <div className="mb-6">
+              <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Product</DialogTitle>
+                    <DialogDescription>Update product information.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="edit-product-name">Name</Label>
+                      <Input
+                        id="edit-product-name"
+                        value={editProduct.name}
+                        onChange={(e) => setEditProduct({ ...editProduct, name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-product-description">Description</Label>
+                      <Input
+                        id="edit-product-description"
+                        value={editProduct.description}
+                        onChange={(e) => setEditProduct({ ...editProduct, description: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-product-price">Price</Label>
+                      <Input
+                        id="edit-product-price"
+                        type="number"
+                        value={editProduct.price}
+                        onChange={(e) => setEditProduct({ ...editProduct, price: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-product-stock">Stock</Label>
+                      <Input
+                        id="edit-product-stock"
+                        type="number"
+                        value={editProduct.stock}
+                        onChange={(e) => setEditProduct({ ...editProduct, stock: e.target.value })}
+                      />
+                    </div>
+                    <Button onClick={handleUpdateProduct} className="w-full">Update Product</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {products.map((product) => (
                 <Card key={product.id} className="hover:shadow-lg transition-shadow">
@@ -198,7 +326,10 @@ export default function ProductsPage() {
                         Stock: {product.stock}
                       </span>
                     </div>
-                    <Button variant="outline" className="w-full">Edit Product</Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={() => openEditDialog(product)}>Edit</Button>
+                      <Button variant="destructive" className="flex-1" onClick={() => deleteProduct(product.id)}>Delete</Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

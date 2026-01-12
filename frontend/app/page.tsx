@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const router = useRouter()
   const login = useAuthStore((state) => state.login)
   const { theme, toggleTheme } = useThemeStore()
@@ -22,6 +23,7 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError('')
+    setSuccess('')
 
     try {
       const response = await fetch('http://localhost:5000/auth/login', {
@@ -35,9 +37,11 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        if (data.requires2FA) {
-          // TODO: Handle 2FA
-          alert('2FA required')
+        setSuccess('Connexion réussie, redirection en cours...')
+        if (data.requiresSetup2FA) {
+          router.push(`/setup-2fa?userId=${data.userId}`)
+        } else if (data.requires2FA) {
+          router.push(`/verify-2fa?userId=${data.userId}`)
         } else {
           login(data.user, data.access_token)
           // Redirect based on role
@@ -50,10 +54,10 @@ export default function LoginPage() {
           }
         }
       } else {
-        setError(data.error || 'Login failed')
+        setError(data.error || 'Échec de la connexion')
       }
     } catch (err) {
-      setError('Network error')
+      setError('Erreur réseau')
     } finally {
       setIsLoading(false)
     }
@@ -110,8 +114,9 @@ export default function LoginPage() {
               />
             </div>
             {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
+            {success && <p className="text-green-500 dark:text-green-400 text-sm">{success}</p>}
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? 'Connexion en cours...' : 'Login'}
             </Button>
             <div className="text-center mt-4">
               <a href="/forgot-password" className="text-sm text-blue-600 dark:text-white hover:underline">

@@ -6,8 +6,17 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
+  async findAllGlobal(user: any) {
+    if (user.role !== 'SUPERADMIN') {
+      throw new ForbiddenException('Only SUPERADMIN can view all users');
+    }
+    return this.prisma.user.findMany({
+      select: { id: true, email: true, role: true, tenantId: true, createdAt: true },
+    });
+  }
+
   async findAll(tenantId: string, user: any) {
-    if (user.role !== 'DIRECTEUR' && user.role !== 'GERANT' && user.role !== 'VENDEUR' && user.role !== 'SUPERADMIN') {
+    if (user.role !== 'DIRECTEUR' && user.role !== 'VENDEUR' && user.role !== 'SUPERADMIN') {
       throw new ForbiddenException('Insufficient permissions');
     }
     // SUPERADMIN can view users in any tenant, but others can only view in their own tenant

@@ -1,0 +1,40 @@
+{
+  "sidebar": {
+    "dashboard": "Superadmin Dashboard",
+    "tenants": "Workspaces/Tenants",
+    "analytics": "Analytics",
+    "subscriptions": "Subscriptions",
+    "users": "Users",
+    "settings": "Settings"
+  },
+  "buttons": {
+    "logout": "Logout",
+    "create_subscription": "Create subscription",
+    "cancel": "Cancel",
+    "create": "Create"
+  },
+  "superadmin": {
+    "title_dashboard": "Superadmin Dashboard",
+    "title_tenants": "Manage Workspaces",
+    "title_analytics": "Analytics",
+    "title_settings": "Settings",
+    "title_users": "Authentication / Users",
+    "title_subscriptions": "Subscription Management"
+  },
+  "admin": {
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "subscriptions": "Subscription",
+      "sales": "Sales",
+      "products": "Products",
+      "stock": "Stock Management",
+      "statistics": "Statistics"
+    },
+    "titles": {
+      "dashboard": "Dashboard",
+      "logout": "Logout",
+      "manage_subscription": "Manage Subscription",
+      "upgrade_plan": "Upgrade Plan"
+    }
+  }
+}

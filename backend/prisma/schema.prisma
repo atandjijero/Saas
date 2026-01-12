@@ -20,6 +20,7 @@ model Tenant {
   users    User[]
   products Product[]
   sales    Sale[]
+  subscription Subscription?
 
   @@map("tenants")
 }
@@ -86,4 +87,23 @@ model SaleItem {
   price     Float
 
   @@map("sale_items")
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  tenantId    String    @unique
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planName    String
+  planType    String    // FREE, BASIC, PROFESSIONAL, ENTERPRISE
+  price       Float
+  maxUsers    Int
+  maxProducts Int
+  features    String[]  // Array of feature names
+  isActive    Boolean   @default(true)
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("subscriptions")
 }

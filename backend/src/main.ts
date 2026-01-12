@@ -11,7 +11,6 @@ async function bootstrap() {
     .setTitle('SaaS API')
     .setDescription('API documentation for the SaaS commercial management platform')
     .setVersion('1.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

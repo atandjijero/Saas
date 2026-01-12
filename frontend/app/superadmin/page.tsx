@@ -1,16 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useT } from '@/lib/i18n'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
-import { useAuthStore } from '@/stores/auth.store'
-import { UserMenu } from '@/components/user-menu'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
+import { AlertCircle, CheckCircle } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip } from 'recharts'
+
+import { useAuthStore } from '@/stores/auth.store'
+import { UserMenu } from '@/components/user-menu'
 
 interface Tenant {
   id: string
@@ -28,7 +37,14 @@ interface TenantDetails {
   updatedAt: string
 }
 
-type ActiveSection = 'dashboard' | 'tenants' | 'analytics' | 'settings' | 'users'
+interface GlobalStats {
+  totalRevenue: number
+  totalTenants: number
+  totalUsers: number
+  tenantRevenues: { tenantId: string; name: string; revenue: number }[]
+}
+
+type ActiveSection = 'dashboard' | 'tenants' | 'analytics' | 'settings' | 'users' | 'subscriptions'
 
 export default function SuperadminDashboard() {
   const [tenants, setTenants] = useState<Tenant[]>([])
@@ -45,17 +61,38 @@ export default function SuperadminDashboard() {
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserPassword, setNewUserPassword] = useState('')
   const [newUserRole, setNewUserRole] = useState('DIRECTEUR')
-  const { token } = useAuthStore()
-  const logout = useAuthStore((state) => state.logout)
+  const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null)
+  const [subscriptions, setSubscriptions] = useState<any[]>([])
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [subscriptionError, setSubscriptionError] = useState('')
+  const [subscriptionSuccess, setSubscriptionSuccess] = useState('')
+  const [createSubscriptionOpen, setCreateSubscriptionOpen] = useState(false)
+  const [newSubscriptionData, setNewSubscriptionData] = useState({
+    tenantId: '',
+    planName: '',
+    planType: 'BASIC',
+    price: '',
+    maxUsers: '',
+    maxProducts: '',
+    features: ''
+  })
+  const { token, logout } = useAuthStore()
 
   useEffect(() => {
     // Wait for token to be available from persisted store before fetching
     if (token) {
       fetchTenantsData()
+      fetchGlobalStats()
     }
   }, [token])
 
-  const fetchTenantsData = async () => {
+  useEffect(() => {
+    if (token && activeSection === 'subscriptions') {
+      fetchSubscriptions()
+    }
+  }, [token, activeSection])
+
+  const fetchTenantsData = useCallback(async () => {
     try {
       // Fetch tenants with revenue for dashboard
       const statsResponse = await fetch('http://localhost:5000/stats/all-revenue', {
@@ -83,7 +120,7 @@ export default function SuperadminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [token])
 
   const fetchUsersForTenant = async (tenantId: string) => {
     if (!tenantId) return
@@ -102,6 +139,39 @@ export default function SuperadminDashboard() {
       setUsers([])
     }
   }
+
+  const fetchGlobalStats = useCallback(async () => {
+    try {
+      const [revenueRes, tenantsRes, usersRes] = await Promise.all([
+        fetch('http://localhost:5000/stats/all-revenue', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch('http://localhost:5000/tenants', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch('http://localhost:5000/users', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ])
+
+      const revenueData = await revenueRes.json()
+      const tenantsData = await tenantsRes.json()
+      const usersData = await usersRes.json()
+
+      const totalRevenue = revenueData.reduce((sum: number, tenant: any) => sum + tenant.revenue, 0)
+      const totalTenants = tenantsData.length
+      const totalUsers = usersData.length
+
+      setGlobalStats({
+        totalRevenue,
+        totalTenants,
+        totalUsers,
+        tenantRevenues: revenueData,
+      })
+    } catch (err) {
+      console.error('Error fetching global stats:', err)
+    }
+  }, [token])
 
   const createTenant = async () => {
     if (!newTenantName.trim() || !newTenantDomain.trim()) return
@@ -168,6 +238,73 @@ export default function SuperadminDashboard() {
     }
   }
 
+  const fetchSubscriptions = useCallback(async () => {
+    if (!token) return
+    setSubscriptionLoading(true)
+    setSubscriptionError('')
+    try {
+      const response = await fetch('http://localhost:5000/subscriptions', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setSubscriptions(data)
+      } else {
+        setSubscriptionError('Erreur lors de la récupération des abonnements')
+      }
+    } catch (error) {
+      setSubscriptionError('Erreur réseau lors de la récupération des abonnements')
+    } finally {
+      setSubscriptionLoading(false)
+    }
+  }, [token])
+
+  const createSubscription = async () => {
+    if (!token) return
+    setSubscriptionLoading(true)
+    setSubscriptionError('')
+    setSubscriptionSuccess('')
+    try {
+      const response = await fetch('http://localhost:5000/subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          tenantId: newSubscriptionData.tenantId,
+          planName: newSubscriptionData.planName,
+          planType: newSubscriptionData.planType,
+          price: parseFloat(newSubscriptionData.price),
+          maxUsers: parseInt(newSubscriptionData.maxUsers),
+          maxProducts: parseInt(newSubscriptionData.maxProducts),
+          features: newSubscriptionData.features.split(',').map(f => f.trim())
+        })
+      })
+      if (response.ok) {
+        setSubscriptionSuccess('Abonnement créé avec succès')
+        setCreateSubscriptionOpen(false)
+        setNewSubscriptionData({
+          tenantId: '',
+          planName: '',
+          planType: 'BASIC',
+          price: '',
+          maxUsers: '',
+          maxProducts: '',
+          features: ''
+        })
+        fetchSubscriptions()
+      } else {
+        const error = await response.json()
+        setSubscriptionError(error.message || 'Erreur lors de la création de l\'abonnement')
+      }
+    } catch (error) {
+      setSubscriptionError('Erreur réseau lors de la création de l\'abonnement')
+    } finally {
+      setSubscriptionLoading(false)
+    }
+  }
+
   if (loading) return <div>Loading...</div>
 
   return (
@@ -175,7 +312,7 @@ export default function SuperadminDashboard() {
       <div className="flex h-screen">
         <Sidebar>
           <SidebarHeader>
-            <h2 className="text-lg font-semibold text-center">Superadmin Dashboard</h2>
+            <h2 className="text-lg font-semibold text-center">Tableau de bord Superadmin</h2>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
@@ -193,7 +330,7 @@ export default function SuperadminDashboard() {
                     onClick={() => setActiveSection('tenants')}
                     className={activeSection === 'tenants' ? 'bg-gray-100 dark:bg-gray-700' : ''}
                   >
-                    Tenants
+                    Workspaces/Tenants
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -205,11 +342,19 @@ export default function SuperadminDashboard() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => setActiveSection('subscriptions')}
+                        className={activeSection === 'subscriptions' ? 'bg-gray-100 dark:bg-gray-700' : ''}
+                      >
+                        {useT()('sidebar.subscriptions')}
+                      </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={() => setActiveSection('users')}
                     className={activeSection === 'users' ? 'bg-gray-100 dark:bg-gray-700' : ''}
                   >
-                    Auth / Users
+                    Users
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -229,14 +374,15 @@ export default function SuperadminDashboard() {
           <div className="flex items-center gap-2 mb-6">
             <SidebarTrigger />
             <h1 className="text-3xl font-bold">
-              {activeSection === 'dashboard' && 'Superadmin Dashboard'}
-              {activeSection === 'tenants' && 'Tenant Management'}
-              {activeSection === 'analytics' && 'Analytics'}
-              {activeSection === 'settings' && 'Settings'}
-              {activeSection === 'users' && 'Auth / Users'}
+              {activeSection === 'dashboard' && useT()('superadmin.title_dashboard')}
+              {activeSection === 'tenants' && useT()('superadmin.title_tenants')}
+              {activeSection === 'analytics' && useT()('superadmin.title_analytics')}
+              {activeSection === 'settings' && useT()('superadmin.title_settings')}
+              {activeSection === 'users' && useT()('superadmin.title_users')}
+              {activeSection === 'subscriptions' && useT()('superadmin.title_subscriptions')}
             </h1>
             <Button onClick={() => { logout(); window.location.href = '/'; }} variant="outline" className="ml-auto">
-              Logout
+              {useT()('buttons.logout')}
             </Button>
           </div>
 
@@ -485,16 +631,160 @@ export default function SuperadminDashboard() {
               </div>
             )}
 
-            {activeSection === 'analytics' && (
-              <Card className="hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-gray-900 dark:text-white">Analytics</CardTitle>
-                  <CardDescription className="text-gray-600 dark:text-gray-400">Advanced analytics and reporting</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 dark:text-gray-400">Analytics features coming soon...</p>
-                </CardContent>
-              </Card>
+            {activeSection === 'subscriptions' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Gestion des abonnements</h2>
+                  <Button onClick={() => { setCreateSubscriptionOpen(true); fetchSubscriptions(); }} className="bg-blue-600 hover:bg-blue-700">
+                    Créer un abonnement
+                  </Button>
+                </div>
+
+                {subscriptionError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Erreur</AlertTitle>
+                    <AlertDescription>{subscriptionError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {subscriptionSuccess && (
+                  <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-800 dark:text-green-200">Succès</AlertTitle>
+                    <AlertDescription className="text-green-700 dark:text-green-300">{subscriptionSuccess}</AlertDescription>
+                  </Alert>
+                )}
+
+                <Card className="hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="text-gray-900 dark:text-white">Abonnements actifs</CardTitle>
+                    <CardDescription className="text-gray-600 dark:text-gray-400">Liste de tous les abonnements actifs dans le système</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {subscriptionLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-2 text-gray-600 dark:text-gray-400">Chargement des abonnements...</p>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-gray-900 dark:text-white">Tenant</TableHead>
+                            <TableHead className="text-gray-900 dark:text-white">Plan</TableHead>
+                            <TableHead className="text-gray-900 dark:text-white">Prix</TableHead>
+                            <TableHead className="text-gray-900 dark:text-white">Utilisateurs max</TableHead>
+                            <TableHead className="text-gray-900 dark:text-white">Produits max</TableHead>
+                            <TableHead className="text-gray-900 dark:text-white">Statut</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {subscriptions.map((sub) => (
+                            <TableRow key={sub.id}>
+                              <TableCell className="font-medium text-gray-900 dark:text-white">
+                                {allTenants.find(t => t.id === sub.tenantId)?.name ?? 'Inconnu'}
+                              </TableCell>
+                              <TableCell className="text-gray-600 dark:text-gray-400">{sub.planName}</TableCell>
+                              <TableCell className="text-gray-600 dark:text-gray-400">${sub.price}</TableCell>
+                              <TableCell className="text-gray-600 dark:text-gray-400">{sub.maxUsers}</TableCell>
+                              <TableCell className="text-gray-600 dark:text-gray-400">{sub.maxProducts}</TableCell>
+                              <TableCell>
+                                <Badge variant={sub.planType === 'FREE' ? 'secondary' : sub.planType === 'BASIC' ? 'default' : 'destructive'}>
+                                  {sub.planType}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                    {subscriptions.length === 0 && !subscriptionLoading && (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">Aucun abonnement trouvé.</div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeSection === 'analytics' && globalStats && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle className="text-gray-900 dark:text-white">Total Revenue</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold text-green-600 dark:text-white">
+                        ${globalStats.totalRevenue.toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle className="text-gray-900 dark:text-white">Total Tenants</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold text-blue-600 dark:text-white">{globalStats.totalTenants}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle className="text-gray-900 dark:text-white">Total Users</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-3xl font-bold text-purple-600 dark:text-white">{globalStats.totalUsers}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="text-gray-900 dark:text-white">Revenue by Tenant</CardTitle>
+                    <CardDescription className="text-gray-600 dark:text-gray-400">Distribution of revenue across all tenants</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={{}} className="h-[300px]">
+                      <BarChart data={globalStats.tenantRevenues.map(t => ({ name: t.name, revenue: t.revenue }))}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="revenue" fill="#3b82f6" />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="text-gray-900 dark:text-white">Tenant Performance</CardTitle>
+                    <CardDescription className="text-gray-600 dark:text-gray-400">Detailed breakdown of tenant metrics</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-gray-900 dark:text-white">Tenant Name</TableHead>
+                          <TableHead className="text-gray-900 dark:text-white">Revenue</TableHead>
+                          <TableHead className="text-gray-900 dark:text-white">Percentage of Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {globalStats.tenantRevenues.map((tenant) => (
+                          <TableRow key={tenant.tenantId}>
+                            <TableCell className="font-medium text-gray-900 dark:text-white">{tenant.name}</TableCell>
+                            <TableCell className="text-gray-600 dark:text-gray-400">${tenant.revenue.toLocaleString()}</TableCell>
+                            <TableCell className="text-gray-600 dark:text-gray-400">
+                              {globalStats.totalRevenue > 0 ? ((tenant.revenue / globalStats.totalRevenue) * 100).toFixed(1) : 0}%
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             {activeSection === 'settings' && (
@@ -511,6 +801,123 @@ export default function SuperadminDashboard() {
           </div>
         </main>
       </div>
+
+      <Dialog open={createSubscriptionOpen} onOpenChange={setCreateSubscriptionOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Créer un nouvel abonnement</DialogTitle>
+            <DialogDescription>
+              Configurez un nouvel abonnement pour un tenant existant.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tenant" className="text-right">
+                Tenant
+              </Label>
+              <Select value={newSubscriptionData.tenantId} onValueChange={(value) => setNewSubscriptionData({...newSubscriptionData, tenantId: value})}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Sélectionnez un tenant" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allTenants.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id.toString()}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="planName" className="text-right">
+                Nom du plan
+              </Label>
+              <Input
+                id="planName"
+                value={newSubscriptionData.planName}
+                onChange={(e) => setNewSubscriptionData({...newSubscriptionData, planName: e.target.value})}
+                className="col-span-3"
+                placeholder="Ex: Plan Premium"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="planType" className="text-right">
+                Type de plan
+              </Label>
+              <Select value={newSubscriptionData.planType} onValueChange={(value) => setNewSubscriptionData({...newSubscriptionData, planType: value})}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FREE">FREE</SelectItem>
+                  <SelectItem value="BASIC">BASIC</SelectItem>
+                  <SelectItem value="PROFESSIONAL">PROFESSIONAL</SelectItem>
+                  <SelectItem value="ENTERPRISE">ENTERPRISE</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="price" className="text-right">
+                Prix ($)
+              </Label>
+              <Input
+                id="price"
+                type="number"
+                value={newSubscriptionData.price}
+                onChange={(e) => setNewSubscriptionData({...newSubscriptionData, price: e.target.value})}
+                className="col-span-3"
+                placeholder="0.00"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="maxUsers" className="text-right">
+                Utilisateurs max
+              </Label>
+              <Input
+                id="maxUsers"
+                type="number"
+                value={newSubscriptionData.maxUsers}
+                onChange={(e) => setNewSubscriptionData({...newSubscriptionData, maxUsers: e.target.value})}
+                className="col-span-3"
+                placeholder="10"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="maxProducts" className="text-right">
+                Produits max
+              </Label>
+              <Input
+                id="maxProducts"
+                type="number"
+                value={newSubscriptionData.maxProducts}
+                onChange={(e) => setNewSubscriptionData({...newSubscriptionData, maxProducts: e.target.value})}
+                className="col-span-3"
+                placeholder="100"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="features" className="text-right">
+                Fonctionnalités
+              </Label>
+              <Input
+                id="features"
+                value={newSubscriptionData.features}
+                onChange={(e) => setNewSubscriptionData({...newSubscriptionData, features: e.target.value})}
+                className="col-span-3"
+                placeholder="Fonctionnalité 1, Fonctionnalité 2, ..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCreateSubscriptionOpen(false)}>
+              Annuler
+            </Button>
+            <Button type="button" onClick={createSubscription} disabled={subscriptionLoading}>
+              {subscriptionLoading ? 'Création...' : 'Créer l\'abonnement'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   )
 }

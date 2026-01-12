@@ -1,0 +1,40 @@
+{
+  "sidebar": {
+    "dashboard": "Tableau de bord Superadmin",
+    "tenants": "Workspaces/Tenants",
+    "analytics": "Analytiques",
+    "subscriptions": "Abonnements",
+    "users": "Utilisateurs",
+    "settings": "Paramètres"
+  },
+  "buttons": {
+    "logout": "Déconnexion",
+    "create_subscription": "Créer un abonnement",
+    "cancel": "Annuler",
+    "create": "Créer"
+  },
+  "superadmin": {
+    "title_dashboard": "Tableau de bord Superadmin",
+    "title_tenants": "Gestion des entreprises",
+    "title_analytics": "Analytiques",
+    "title_settings": "Paramètres",
+    "title_users": "Authentification / Utilisateurs",
+    "title_subscriptions": "Gestion des abonnements"
+  },
+  "admin": {
+    "sidebar": {
+      "dashboard": "Tableau de bord",
+      "subscriptions": "Abonnement",
+      "sales": "Ventes",
+      "products": "Produits",
+      "stock": "Gestion du stock",
+      "statistics": "Statistiques"
+    },
+    "titles": {
+      "dashboard": "Tableau de bord",
+      "logout": "Déconnexion",
+      "manage_subscription": "Gérer l'abonnement",
+      "upgrade_plan": "Changer de plan"
+    }
+  }
+}

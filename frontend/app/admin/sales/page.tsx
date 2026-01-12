@@ -11,7 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuthStore } from '@/stores/auth.store'
 import Link from 'next/link'
 import { UserMenu } from '@/components/user-menu'
+import { useT } from '@/lib/i18n'
 import { ShoppingCart } from 'lucide-react'
+import { useSocket } from '@/hooks/use-socket'
+
+export const dynamic = 'force-dynamic'
 
 interface Product {
   id: string
@@ -51,8 +55,11 @@ export default function SalesPage() {
   const [saleCart, setSaleCart] = useState<CartItem[]>([])
   const [selectedProduct, setSelectedProduct] = useState('')
   const [selectedQuantity, setSelectedQuantity] = useState('')
+  const [stockUpdates, setStockUpdates] = useState<{[key: string]: boolean}>({})
   const { token, user } = useAuthStore()
   const logout = useAuthStore((state) => state.logout)
+  const t = useT()
+  const { socket } = useSocket(user?.tenantId)
 
   useEffect(() => {
     if (user?.tenantId) {
@@ -62,6 +69,35 @@ export default function SalesPage() {
       setLoading(false)
     }
   }, [user?.tenantId])
+
+  // Listen for real-time stock updates
+  useEffect(() => {
+    if (!socket) return
+
+    const handleStockUpdate = (data: { productId: string; newStock: number }) => {
+      setProducts(prevProducts =>
+        prevProducts.map(product =>
+          product.id === data.productId
+            ? { ...product, stock: data.newStock }
+            : product
+        )
+      )
+      
+      // Mark product as recently updated
+      setStockUpdates(prev => ({ ...prev, [data.productId]: true }))
+      
+      // Remove the highlight after 3 seconds
+      setTimeout(() => {
+        setStockUpdates(prev => ({ ...prev, [data.productId]: false }))
+      }, 3000)
+    }
+
+    socket.on('stockUpdate', handleStockUpdate)
+
+    return () => {
+      socket.off('stockUpdate', handleStockUpdate)
+    }
+  }, [socket])
 
   const fetchSales = async () => {
     try {
@@ -269,21 +305,26 @@ export default function SalesPage() {
               <div className="space-y-2">
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <Link href="/admin" className="w-full">Dashboard</Link>
+                    <Link href="/admin" className="w-full">{t('admin.sidebar.dashboard')}</Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <Link href="/admin/sales" className="w-full">Sales</Link>
+                    <Link href="/admin/sales" className="w-full">{t('admin.sidebar.sales')}</Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <Link href="/admin/products" className="w-full">Products</Link>
+                    <Link href="/admin/subscriptions" className="w-full">{t('admin.sidebar.subscriptions')}</Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton className="w-full">Statistics</SidebarMenuButton>
+                  <SidebarMenuButton asChild>
+                    <Link href="/admin/products" className="w-full">{t('admin.sidebar.products')}</Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton className="w-full">{t('admin.sidebar.statistics')}</SidebarMenuButton>
                 </SidebarMenuItem>
               </div>
             </SidebarMenu>
@@ -293,9 +334,15 @@ export default function SalesPage() {
         <main className="flex-1 p-6">
           <div className="flex items-center gap-2 mb-6">
             <SidebarTrigger />
-            <h1 className="text-3xl font-bold">Sales Management</h1>
+            <h1 className="text-3xl font-bold">{t('admin.titles.sales_management')}</h1>
+            <div className="flex items-center gap-2 ml-4">
+              <div className={`w-2 h-2 rounded-full ${socket ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm text-gray-600">
+                {socket ? t('admin.labels.live_updates') : t('admin.labels.offline')}
+              </span>
+            </div>
             <Button onClick={() => { logout(); window.location.href = '/'; }} variant="outline" className="ml-auto">
-              Logout
+              {t('admin.titles.logout')}
             </Button>
           </div>
 
@@ -342,7 +389,10 @@ export default function SalesPage() {
                               <SelectContent>
                                 {products.map((product) => (
                                   <SelectItem key={product.id} value={product.id}>
-                                    {product.name} - ${product.price} (Stock: {product.stock})
+                                    <span className={stockUpdates[product.id] ? 'text-green-600 font-semibold animate-pulse' : ''}>
+                                      {product.name} - ${product.price} (Stock: {product.stock})
+                                      {stockUpdates[product.id] && ' 🔄'}
+                                    </span>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -429,7 +479,10 @@ export default function SalesPage() {
                           <SelectContent>
                             {products.map((product) => (
                               <SelectItem key={product.id} value={product.id}>
-                                {product.name} - ${product.price} (Stock: {product.stock})
+                                <span className={stockUpdates[product.id] ? 'text-green-600 font-semibold animate-pulse' : ''}>
+                                  {product.name} - ${product.price} (Stock: {product.stock})
+                                  {stockUpdates[product.id] && ' 🔄'}
+                                </span>
                               </SelectItem>
                             ))}
                           </SelectContent>

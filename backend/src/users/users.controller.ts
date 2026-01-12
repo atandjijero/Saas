@@ -11,6 +11,11 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
+  @Get()
+  findAllGlobal(@Request() req) {
+    return this.usersService.findAllGlobal(req.user);
+  }
+
   @Get(':tenantId')
   findAll(@Param('tenantId') tenantId: string, @Request() req) {
     return this.usersService.findAll(tenantId, req.user);

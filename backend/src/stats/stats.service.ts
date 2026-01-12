@@ -18,14 +18,21 @@ export class StatsService {
       };
     }
 
-    const result = await this.prisma.sale.aggregate({
+    const result = await this.prisma.sale.groupBy({
+      by: ['date'],
       where,
       _sum: {
         total: true,
       },
+      orderBy: {
+        date: 'asc',
+      },
     });
 
-    return { totalRevenue: result._sum.total || 0 };
+    return result.map(item => ({
+      date: item.date.toISOString().split('T')[0],
+      amount: item._sum.total || 0,
+    }));
   }
 
   async getAllTenantsRevenue(user: any) {

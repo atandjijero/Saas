@@ -51,10 +51,18 @@ export default function AppDashboard() {
   const [selectedProductForQuantity, setSelectedProductForQuantity] = useState<Product | null>(null)
   const [selectedQuantity, setSelectedQuantity] = useState('')
   const [isClient, setIsClient] = useState(false)
+  const [success, setSuccess] = useState('')
+  const [error, setError] = useState('')
+  const [isProcessing, setIsProcessing] = useState(false)
   const { token, user } = useAuthStore()
   const { theme, toggleTheme } = useThemeStore()
   const logout = useAuthStore((state) => state.logout)
   const router = useRouter()
+
+  const clearMessages = () => {
+    setError('')
+    setSuccess('')
+  }
 
   // Handle client-side hydration
   useEffect(() => {
@@ -73,6 +81,12 @@ export default function AppDashboard() {
     // Check if user is authenticated
     if (!token || !user) {
       router.push('/')
+      return
+    }
+
+    // Check if user has permission to access sales interface
+    if (user?.role !== 'VENDEUR' && user?.role !== 'DIRECTEUR') {
+      router.push('/admin')
       return
     }
 
@@ -111,6 +125,7 @@ export default function AppDashboard() {
   }
 
   const addToCart = (product: Product) => {
+    clearMessages()
     setSelectedProductForQuantity(product)
     setSelectedQuantity('1')
     setQuantityDialogOpen(true)
@@ -121,14 +136,18 @@ export default function AppDashboard() {
 
     const quantity = parseInt(selectedQuantity)
     if (quantity <= 0) {
-      alert('Quantity must be greater than 0')
+      setError('La quantité doit être supérieure à 0')
       return
     }
 
     if (quantity > selectedProductForQuantity.stock) {
-      alert('Not enough stock available')
+      setError('Stock insuffisant disponible')
       return
     }
+
+    // Clear any previous messages
+    setError('')
+    setSuccess('')
 
     // Check if product is already in cart
     const existingItem = saleCart.find(item => item.productId === selectedProductForQuantity.id)
@@ -165,14 +184,18 @@ export default function AppDashboard() {
 
   const finalizeSale = async () => {
     if (saleCart.length === 0) {
-      alert('Cart is empty')
+      setError('Le panier est vide')
       return
     }
 
     if (!user || !token) {
-      alert('You must be logged in to complete a sale')
+      setError('Vous devez être connecté pour finaliser une vente')
       return
     }
+
+    setIsProcessing(true)
+    setError('')
+    setSuccess('')
 
     try {
       const requestBody = {
@@ -192,7 +215,7 @@ export default function AppDashboard() {
       })
 
       if (response.ok) {
-        alert('Sale completed successfully!')
+        setSuccess('Vente finalisée avec succès !')
         setSaleCart([])
         setCartDialogOpen(false)
         // Refresh products to update stock
@@ -200,11 +223,13 @@ export default function AppDashboard() {
       } else {
         const errorText = await response.text()
         console.error('Failed to complete sale:', response.status, errorText)
-        alert(`Failed to complete sale: ${response.status} - ${errorText}`)
+        setError(`Échec de la finalisation de la vente: ${response.status} - ${errorText}`)
       }
     } catch (error) {
       console.error('Error completing sale:', error)
-      alert('Error completing sale')
+      setError('Erreur lors de la finalisation de la vente')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -224,7 +249,7 @@ export default function AppDashboard() {
 
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                Welcome, {user?.email}
+                Welcome, {user?.email} ({user?.role})
               </span>
 
               <DropdownMenu>
@@ -271,6 +296,23 @@ export default function AppDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Feedback Messages */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <p className="text-green-600 dark:text-green-400 text-sm">{success}</p>
+          </div>
+        )}
+        {isProcessing && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p className="text-blue-600 dark:text-blue-400 text-sm">Traitement en cours...</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => (
             <Card key={product.id} className="hover:shadow-lg transition-shadow bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
@@ -291,7 +333,7 @@ export default function AppDashboard() {
                   ${product.price.toFixed(2)}
                 </p>
                 <Button className="w-full" onClick={() => addToCart(product)}>
-                  Add to Sale
+                  Ajouter à la vente
                 </Button>
               </CardContent>
             </Card>
@@ -310,9 +352,9 @@ export default function AppDashboard() {
           <Dialog open={quantityDialogOpen} onOpenChange={setQuantityDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add to Cart</DialogTitle>
+                <DialogTitle>Ajouter au panier</DialogTitle>
                 <DialogDescription>
-                  Select quantity for {selectedProductForQuantity?.name}
+                  Sélectionner la quantité pour {selectedProductForQuantity?.name}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -333,10 +375,10 @@ export default function AppDashboard() {
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={confirmAddToCart} className="flex-1">
-                    Add to Cart
+                    Ajouter au panier
                   </Button>
                   <Button variant="outline" onClick={() => setQuantityDialogOpen(false)} className="flex-1">
-                    Cancel
+                    Annuler
                   </Button>
                 </div>
               </div>
@@ -345,9 +387,9 @@ export default function AppDashboard() {
 
           <Dialog open={cartDialogOpen} onOpenChange={setCartDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" size="lg" className="px-8 relative">
+              <Button variant="outline" size="lg" className="px-8 relative" onClick={clearMessages}>
                 <ShoppingCart className="w-4 h-4 mr-2" />
-                Sale Cart
+                Panier de vente
                 {saleCart.length > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {saleCart.length}
@@ -357,15 +399,15 @@ export default function AppDashboard() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Sale Cart</DialogTitle>
-                <DialogDescription>Review your sale items and complete the transaction.</DialogDescription>
+                <DialogTitle>Panier de vente</DialogTitle>
+                <DialogDescription>Vérifiez vos articles et finalisez la transaction.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 {/* Cart items */}
                 <div className="space-y-2">
-                  <h4 className="font-medium">Cart Items ({saleCart.length})</h4>
+                  <h4 className="font-medium">Articles du panier ({saleCart.length})</h4>
                   {saleCart.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No items in cart</p>
+                    <p className="text-gray-500 text-sm">Aucun article dans le panier</p>
                   ) : (
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {saleCart.map((item) => (
@@ -381,7 +423,7 @@ export default function AppDashboard() {
                             size="sm"
                             onClick={() => removeFromCart(item.productId)}
                           >
-                            Remove
+                            Retirer
                           </Button>
                         </div>
                       ))}
@@ -395,8 +437,8 @@ export default function AppDashboard() {
                     <div className="flex justify-between items-center mb-4">
                       <span className="text-lg font-semibold">Total: ${getCartTotal().toFixed(2)}</span>
                     </div>
-                    <Button onClick={finalizeSale} className="w-full">
-                      Complete Sale
+                    <Button onClick={finalizeSale} className="w-full" disabled={isProcessing}>
+                      {isProcessing ? 'Finalisation...' : 'Finaliser la vente'}
                     </Button>
                   </div>
                 )}

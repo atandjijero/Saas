@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
-// import { Throttle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -16,7 +16,7 @@ export class TenantsController {
 
   @Post()
   @Roles('SUPERADMIN')
-  // @Throttle(5, 900) // Temporarily disabled due to version issues
+  @Throttle({ strict: { limit: 2, ttl: 3600000 } }) // 2 tenant creations per hour for SUPERADMIN
   @ApiOperation({ summary: 'Create tenant' })
   create(@Body() body: CreateTenantDto) {
     return this.tenantsService.create(body.name, body.domain);

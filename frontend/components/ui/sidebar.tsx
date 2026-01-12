@@ -565,16 +565,32 @@ const SidebarMenuButton = React.forwardRef<
   ) => {
     const Comp = asChild ? Slot : "button"
     const { isMobile, state } = useSidebar()
+    const { children, ...buttonProps } = props
 
-    const button = (
+    const childArray = React.Children.toArray(children)
+    const validChild = childArray.find(React.isValidElement)
+
+    const button = asChild && validChild ? (
+      <Comp
+        data-sidebar="menu-button"
+        data-size={size}
+        data-active={isActive}
+        className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+        {...buttonProps}
+      >
+        {validChild}
+      </Comp>
+    ) : (
       <Comp
         ref={ref}
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...props}
-      />
+        {...buttonProps}
+      >
+        {children}
+      </Comp>
     )
 
     if (!tooltip) {

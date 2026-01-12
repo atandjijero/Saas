@@ -15,7 +15,7 @@ export class ProductsService {
   }
 
   async create(tenantId: string, name: string, description: string, price: number, stock: number, user: any) {
-    if (!['DIRECTEUR', 'GERANT', 'MAGASINIER'].includes(user.role)) {
+    if (!['DIRECTEUR', 'MAGASINIER'].includes(user.role)) {
       throw new ForbiddenException('Insufficient permissions');
     }
     if (user.tenantId !== tenantId) {
@@ -33,7 +33,7 @@ export class ProductsService {
   }
 
   async update(tenantId: string, productId: string, name: string, description: string, price: number, stock: number, user: any) {
-    if (!['DIRECTEUR', 'GERANT', 'MAGASINIER'].includes(user.role)) {
+    if (!['DIRECTEUR', 'MAGASINIER'].includes(user.role)) {
       throw new ForbiddenException('Insufficient permissions');
     }
     if (user.tenantId !== tenantId) {
@@ -46,7 +46,7 @@ export class ProductsService {
   }
 
   async remove(tenantId: string, productId: string, user: any) {
-    if (!['DIRECTEUR', 'GERANT'].includes(user.role)) {
+    if (!['DIRECTEUR'].includes(user.role)) {
       throw new ForbiddenException('Insufficient permissions');
     }
     if (user.tenantId !== tenantId) {
