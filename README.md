@@ -64,10 +64,9 @@ A comprehensive multi-tenant SaaS platform for commercial management, built with
 - **Email**: Nodemailer
 
 ### Infrastructure
-- **Database**: PostgreSQL 15
+- **Database**: PostgreSQL 16
 - **Cache**: Redis 7
 - **Containerization**: Docker & Docker Compose
-- **Reverse Proxy**: Nginx (implied in docker setup)
 
 ## 📋 Prerequisites
 
@@ -250,12 +249,6 @@ npm run test:cov
 ```
 
 ## 📦 Deployment
-
-### Production Docker Build
-```bash
-# Build for production
-docker-compose -f docker-compose.prod.yml up --build
-```
 
 ### Environment Variables for Production
 Ensure these are set in your production environment:
